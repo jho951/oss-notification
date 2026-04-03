@@ -6,6 +6,15 @@
 - `SendNotificationCommand`
 - `SendNotificationResponse`
 
+## 사용 예시
+
+```java
+SendNotificationCommand command = new SendNotificationCommand();
+command.channelId = "slack";
+command.title = "Deployment done";
+command.body = "release completed";
+```
+
 ## 원칙
 
 - command는 호출 의도를 표현한다.

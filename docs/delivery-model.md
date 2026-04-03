@@ -8,6 +8,7 @@
 2. `config`가 `SenderRegistry`와 `NotificationService`를 제공한다.
 3. `core`가 적절한 sender를 찾아 메시지를 전달한다.
 4. sender는 `NotificationResult`로 성공/실패를 반환한다.
+5. 실패 시 호출자는 channel과 errorMessage를 함께 처리한다.
 
 ## 현재 sender
 

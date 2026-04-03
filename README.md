@@ -1,30 +1,27 @@
 # notification
 
-`notification`은 메시지 발송을 위한 작은 OSS 모듈입니다.
+`notification`은 메시지 발송을 위한 독립 OSS 모듈입니다.
 
-## 구성
+## 핵심 축
 
-- `api`: 외부 호출용 계약
-- `core`: 공통 도메인, 서비스, sender 구현
+- `api`: 외부 계약
+- `core`: 도메인, dispatcher, sender
 - `config`: Spring Boot auto-configuration
 - `starter`: Spring Boot 진입점
 
-## sender
+## 채널
 
-- `console`
-- `webhook`
-- `email`
-- `slack`
+| Channel | Purpose |
+| --- | --- |
+| `console` | 로컬 확인과 디버깅 |
+| `webhook` | 범용 HTTP 연동 |
+| `email` | SMTP 이메일 전송 |
+| `slack` | Slack webhook 전송 |
 
-## 빌드
+## 빌드와 배포
 
-```bash
-./gradlew test
-```
-
-## 배포
-
-- tag `v*` 푸시 시 GitHub Actions가 테스트와 Maven Central 배포를 수행합니다.
+- 테스트: `./gradlew test`
+- 배포: `v*` tag push 시 GitHub Actions가 테스트 후 Maven Central에 publish
 
 ## 문서
 

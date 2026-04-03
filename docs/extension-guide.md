@@ -6,6 +6,7 @@
 2. `ChannelId`를 고정한다.
 3. `NotificationSender`를 구현한다.
 4. `config`에서 빈으로 등록한다.
+5. `docs/channel-adapters.md`와 `docs/modules.md`에 역할을 추가한다.
 
 ## 주의점
 
@@ -14,3 +15,4 @@
 - 외부 API 호출은 타임아웃을 명시한다.
 - SMTP sender는 recipients를 모두 반영해야 한다.
 - Slack sender는 webhook payload를 단순하고 안정적으로 유지한다.
+- `api` 계약은 구현 세부와 분리한다.

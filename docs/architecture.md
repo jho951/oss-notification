@@ -1,11 +1,11 @@
 # Architecture
 
-`notification`은 공통 계약과 채널 실행을 분리한다.
+`notification`은 공통 계약, dispatcher, 채널 어댑터를 분리한다.
 
-## 계층
+## 레이어
 
 - `api`: 호출자와의 계약
-- `core`: 도메인, sender, 서비스
+- `core`: 도메인, dispatcher, sender
 - `config`: Spring Boot 자동 구성
 - `starter`: Spring Boot 의존성 진입점
 
@@ -18,7 +18,9 @@
 
 ## 현재 구현
 
-- `console`: 표준 출력 sender
-- `webhook`: HTTP webhook sender
+- `ConsoleNotificationSender`: 표준 출력 sender
+- `WebhookNotificationSender`: HTTP webhook sender
+- `EmailNotificationSender`: SMTP 이메일 sender
+- `SlackWebhookNotificationSender`: Slack webhook sender
 - `SenderRegistry`: sender 조합
 - `DefaultNotificationService`: route + dispatch

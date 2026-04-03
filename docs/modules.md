@@ -7,12 +7,14 @@
 - `config`: Spring Boot auto-configuration
 - `starter`: `config`를 가져오는 진입점
 
-## 현재 sender
+## sender 조합
 
-- `console`: 로컬 확인
-- `webhook`: 외부 시스템 연동
-- `email`: SMTP 이메일 전송
-- `slack`: Slack webhook 전송
+| Sender | Channel | Role |
+| --- | --- | --- |
+| `ConsoleNotificationSender` | `console` | 로컬 확인 |
+| `WebhookNotificationSender` | `webhook` | 외부 시스템 연동 |
+| `EmailNotificationSender` | `email` | SMTP 이메일 전송 |
+| `SlackWebhookNotificationSender` | `slack` | Slack webhook 전송 |
 
 ## 배포 기준
 
