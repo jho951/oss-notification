@@ -1,18 +1,24 @@
 # Extension Guide
 
-## 새 sender 추가
+## 추가 가능
 
-1. `core/src/main/java/com/notification/core/senders`에 sender 구현을 추가한다.
-2. `ChannelId`를 고정한다.
-3. `NotificationSender`를 구현한다.
-4. `config`에서 빈으로 등록한다.
-5. `docs/channel-adapters.md`와 `docs/modules.md`에 역할을 추가한다.
+- 새로운 전달 채널 구현
+- 새로운 dispatcher 조합 전략
+- 새로운 메시지 attribute 규칙
+- 새로운 알림 우선순위
 
-## 주의점
+## 추가 위치
 
-- sender는 네트워크 실패를 직접 삼키지 말고 `NotificationResult`로 돌려준다.
-- 콘솔 출력은 로컬 확인용으로만 사용한다.
-- 외부 API 호출은 타임아웃을 명시한다.
-- SMTP sender는 recipients를 모두 반영해야 한다.
-- Slack sender는 webhook payload를 단순하고 안정적으로 유지한다.
-- `api` 계약은 구현 세부와 분리한다.
+- 공통 계약 변경은 `notification-api`에 둔다.
+- 기본 구현 또는 reference 구현은 `notification-core`에 둔다.
+- 특정 프레임워크나 외부 서비스 연동은 별도 모듈 또는 애플리케이션에서 구현한다.
+
+## 추가 불가
+
+- 인증 책임
+- 정책 엔진 책임
+- 감사 저장 책임
+- 파일 저장 책임
+- Spring 자동 구성
+- SMTP / Slack / webhook 전송 책임
+- 서비스 비즈니스 규칙

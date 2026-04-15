@@ -1,11 +1,70 @@
+def requiredRootProp = { List<String> keys ->
+    def value = keys.collect { key ->
+        rootProject.findProperty(key)?.toString()?.trim()
+    }.find { it }
+    if (!value) {
+        throw new GradleException("Missing required property. Expected one of: ${keys.join(', ')}")
+    }
+    value
+}
+
+def optionalRootProp = { List<String> keys, String defaultValue = "" ->
+    keys.collect { key ->
+        rootProject.findProperty(key)?.toString()?.trim()
+    }.find { it } ?: defaultValue
+}
+
+def envOrRootProp = { String envName, List<String> propKeys = [], String defaultValue = "" ->
+    def envValue = System.getenv(envName)?.trim()
+    envValue ?: optionalRootProp(propKeys, defaultValue)
+}
+
+def normalizeSigningKey = { Object raw, String charset = "UTF-8" ->
+    def text = raw?.toString()?.trim()
+    if (!text) return ""
+
+    text = text.replace("\\r\\n", "\n").replace("\\n", "\n")
+    if (text.startsWith("-----BEGIN PGP PRIVATE KEY BLOCK-----")) {
+        return text
+    }
+
+    try {
+        return new String(text.decodeBase64(), charset).trim()
+    } catch (Exception ignored) {
+        return text
+    }
+}
+
+def modules = [
+        "notification-api": [
+                artifactId : "notification-api",
+                pomName    : "Notification API",
+                description: "Public contracts for the notification abstraction."
+        ],
+        "notification-core": [
+                artifactId : "notification-core",
+                pomName    : "Notification Core",
+                description: "Core notification dispatcher and reference in-memory channel."
+        ],
+]
+
+group = requiredRootProp(['release_group'])
+version = requiredRootProp(['release_version'])
+
 ext {
-    springBootVersion = findProperty("springBootVersion") ?: "3.5.6"
-    junitVersion = findProperty("junitVersion") ?: "5.10.3"
+    buildConfig = [
+            javaVersion : requiredRootProp(['java_version']).toInteger(),
+            junitVersion: optionalRootProp(['junit_version'], '5.10.0'),
+            encoding    : optionalRootProp(['encoding'], 'UTF-8'),
+            githubOrg   : requiredRootProp(['github_org']),
+            githubRepo  : requiredRootProp(['github_repo']),
+    ]
+    githubBaseUrl = "https://github.com/${buildConfig.githubOrg}/${buildConfig.githubRepo}"
 }
 
 allprojects {
-    group = "io.github.jho951"
-    version = findProperty("releaseVersion") ?: "0.1.0"
+    group = rootProject.group
+    version = rootProject.version
 
     repositories {
         mavenCentral()
@@ -13,72 +72,28 @@ allprojects {
 }
 
 subprojects {
-    apply plugin: "java-library"
-    apply plugin: "maven-publish"
-    apply plugin: "signing"
+    apply plugin: 'java-library'
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(rootProject.ext.buildConfig.javaVersion)
         }
-        withSourcesJar()
-        withJavadocJar()
     }
 
     tasks.withType(JavaCompile).configureEach {
-        options.encoding = "UTF-8"
+        options.release.set(rootProject.ext.buildConfig.javaVersion)
+        options.encoding = rootProject.ext.buildConfig.encoding
     }
 
-    publishing {
-        publications {
-            mavenJava(MavenPublication) {
-                from components.java
-                artifactId = project.name
-
-                pom {
-                    name = project.name
-                    description = "notification module"
-                    url = "https://github.com/jho951/notification"
-                    licenses {
-                        license {
-                            name = "Apache-2.0"
-                            url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
-                        }
-                    }
-                    scm {
-                        connection = "scm:git:git://github.com/jho951/notification.git"
-                        developerConnection = "scm:git:ssh://git@github.com:jho951/notification.git"
-                        url = "https://github.com/jho951/notification"
-                    }
-                    developers {
-                        developer {
-                            id = "jho951"
-                            name = "jho951"
-                        }
-                    }
-                }
-            }
-        }
-
-        repositories {
-            maven {
-                name = "OSSRH"
-                url = uri(findProperty("ossrhUrl") ?: "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-                credentials {
-                    username = findProperty("ossrhUsername") ?: System.getenv("OSSRH_USERNAME")
-                    password = findProperty("ossrhPassword") ?: System.getenv("OSSRH_PASSWORD")
-                }
-            }
-        }
+    tasks.withType(Javadoc).configureEach {
+        options.addStringOption("Xdoclint:none", "-quiet")
     }
 
-    signing {
-        useInMemoryPgpKeys(
-                System.getenv("SIGNING_KEY_ID"),
-                System.getenv("SIGNING_KEY"),
-                System.getenv("SIGNING_PASSWORD")
-        )
-        sign publishing.publications.mavenJava
+    dependencies {
+        testImplementation platform("org.junit:junit-bom:${rootProject.ext.buildConfig.junitVersion}")
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+        testImplementation 'org.assertj:assertj-core:3.24.2'
     }
 
     tasks.withType(Test).configureEach {
@@ -86,25 +101,73 @@ subprojects {
     }
 }
 
-project(":core") {
-    dependencies {
-        testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
-        testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
-    }
-}
+configure(subprojects.findAll { modules.containsKey(it.name) }) {
+    apply plugin: 'maven-publish'
+    apply plugin: 'signing'
 
-project(":config") {
-    dependencies {
-        api project(":core")
-        implementation "org.springframework.boot:spring-boot-autoconfigure:${springBootVersion}"
-        compileOnly "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}"
-        annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}"
-    }
-}
+    def moduleMeta = modules[project.name]
+    def signingKey = normalizeSigningKey(
+            envOrRootProp(
+                    "MAVEN_CENTRAL_GPG_PRIVATE_KEY",
+                    ["mavenCentralSigningKey"]
+            ),
+            rootProject.ext.buildConfig.encoding
+    )
 
-project(":starter") {
-    dependencies {
-        api project(":config")
-        api "org.springframework.boot:spring-boot-autoconfigure:${springBootVersion}"
+    def signingPassword = envOrRootProp(
+            "MAVEN_CENTRAL_GPG_PASSPHRASE",
+            ["mavenCentralSigningPassword"]
+    )
+
+    java {
+        withSourcesJar()
+        withJavadocJar()
+    }
+
+    publishing {
+        publications {
+            create("mavenJava", MavenPublication) {
+                from components.java
+
+                groupId = project.group.toString()
+                artifactId = moduleMeta.artifactId
+                version = project.version.toString()
+
+                pom {
+                    name = moduleMeta.pomName
+                    description = moduleMeta.description
+                    url = rootProject.ext.githubBaseUrl
+
+                    licenses {
+                        license {
+                            name = "Apache License, Version 2.0"
+                            url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = "jho951"
+                            name = "YJH (jho951)"
+                            email = "jho951@naver.com"
+                            url = "https://github.com/${rootProject.ext.buildConfig.githubOrg}"
+                        }
+                    }
+
+                    scm {
+                        connection = "scm:git:${rootProject.ext.githubBaseUrl}.git"
+                        developerConnection = "scm:git:ssh://git@github.com/${rootProject.ext.buildConfig.githubOrg}/${rootProject.ext.buildConfig.githubRepo}.git"
+                        url = rootProject.ext.githubBaseUrl
+                    }
+                }
+            }
+        }
+    }
+
+    signing {
+        if (signingKey) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
+        sign publishing.publications
     }
 }

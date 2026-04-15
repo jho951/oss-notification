@@ -1,26 +1,21 @@
 # Architecture
 
-`notification`은 공통 계약, dispatcher, 채널 어댑터를 분리한다.
-
-## 레이어
-
-- `api`: 호출자와의 계약
-- `core`: 도메인, dispatcher, sender
-- `config`: Spring Boot 자동 구성
-- `starter`: Spring Boot 의존성 진입점
+`notification`은 메시지 모델과 전달 채널 계약을 프레임워크와 분리한다.
 
 ## 원칙
 
-- 메시지 계약은 프레임워크와 분리한다.
-- sender는 전송 책임만 가진다.
-- Spring은 선택적 어댑터다.
-- 배포 가능한 모듈과 테스트용 모듈은 분리한다.
+- API 계약은 프레임워크와 독립적이어야 한다.
+- core는 API 계약의 기본 조합 로직만 제공한다.
+- dispatcher는 채널 호출과 결과 집계만 책임진다.
+- 외부 시스템 전송은 별도 확장 모듈이나 애플리케이션 계층에서 구현한다.
 
-## 현재 구현
+## 구성
 
-- `ConsoleNotificationSender`: 표준 출력 sender
-- `WebhookNotificationSender`: HTTP webhook sender
-- `EmailNotificationSender`: SMTP 이메일 sender
-- `SlackWebhookNotificationSender`: Slack webhook sender
-- `SenderRegistry`: sender 조합
-- `DefaultNotificationService`: route + dispatch
+- `notification-api`: 메시지와 전달 인터페이스
+- `notification-core`: dispatcher와 기본 채널 구현
+
+## 계층 규칙
+
+- `notification-api`에는 도메인 계약만 둔다.
+- `notification-core`에는 순수 Java 구현만 둔다.
+- Spring Boot auto-configuration, SMTP client, Slack webhook client, HTTP webhook client는 포함하지 않는다.

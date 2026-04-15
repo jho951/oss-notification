@@ -2,21 +2,11 @@
 
 ## 역할
 
-- `api`: 외부 호출용 command/response 계약
-- `core`: notification service와 sender 구현
-- `config`: Spring Boot auto-configuration
-- `starter`: `config`를 가져오는 진입점
+- `notification-api`: 메시지 모델, 전달 결과, 채널/dispatcher 인터페이스
+- `notification-core`: dispatcher 조합 구현과 기본 reference channel
 
-## sender 조합
+## 의존 방향
 
-| Sender | Channel | Role |
-| --- | --- | --- |
-| `ConsoleNotificationSender` | `console` | 로컬 확인 |
-| `WebhookNotificationSender` | `webhook` | 외부 시스템 연동 |
-| `EmailNotificationSender` | `email` | SMTP 이메일 전송 |
-| `SlackWebhookNotificationSender` | `slack` | Slack webhook 전송 |
-
-## 배포 기준
-
-- `api`, `core`, `config`, `starter`는 배포 대상
-- 테스트 픽스처는 별도 모듈로 분리할 때만 배포한다
+- `notification-core`는 `notification-api`에만 의존한다.
+- `notification-api`는 다른 모듈에 의존하지 않는다.
+- Spring, SMTP, Slack, webhook 같은 외부 연동은 이 OSS 1계층 모듈에 포함하지 않는다.
